@@ -1,4 +1,5 @@
 from .badnet import BadNet
+from .vgg import VGG16_BN
 import torch
 from utils.utils import print_model_perform
 
@@ -16,6 +17,8 @@ def load_model(model_path, model_type, input_channels, output_num, device):
         model = MLP(input_channels, output_num).to(device)
     elif model_type == 'lr':
         model = LogsticRegression(input_channels, output_num).to(device)
+    elif model_type == 'vgg':
+        model = VGG16_BN().to(device)
     else:
         print("can't match your input model type, please check...")
 

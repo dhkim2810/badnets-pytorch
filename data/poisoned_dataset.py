@@ -22,7 +22,7 @@ class PoisonedDataset(Dataset):
         label_idx = self.targets[item]
 
         label = np.zeros(10)
-        label[label_idx] = 1 # 把num型的label变成10维列表。
+        label[label_idx] = 1
         label = torch.Tensor(label) 
 
         img = img.to(self.device)

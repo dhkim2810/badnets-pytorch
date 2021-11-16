@@ -1,0 +1,1 @@
+python main.py --dataset cifar10 --trigger_label=4 --pp --datapath /root/dataset/CIFAR

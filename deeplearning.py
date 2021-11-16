@@ -7,7 +7,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from tqdm import tqdm
-from models import BadNet
+from models import BadNet, VGG16_BN
 from utils import print_model_perform
 
 
@@ -35,31 +35,32 @@ def optimizer_picker(optimization, param, lr):
 
 
 def backdoor_model_trainer(dataname, train_data_loader, test_data_ori_loader, test_data_tri_loader, trigger_label, epoch, batch_size, loss_mode, optimization, lr, print_perform_every_epoch, basic_model_path, device):
-    badnet = BadNet(input_channels=train_data_loader.dataset.channels, output_num=train_data_loader.dataset.class_num).to(device)
+    # model = BadNet(input_channels=train_data_loader.dataset.channels, output_num=train_data_loader.dataset.class_num).to(device)
+    model = VGG16_BN().to(device)
     criterion = loss_picker(loss_mode)
-    optimizer = optimizer_picker(optimization, badnet.parameters(), lr=lr)
+    optimizer = optimizer_picker(optimization, model.parameters(), lr=lr)
 
     train_process = []
     print("### target label is %d, EPOCH is %d, Learning Rate is %f" % (trigger_label, epoch, lr))
     print("### Train set size is %d, ori test set size is %d, tri test set size is %d\n" % (len(train_data_loader.dataset), len(test_data_ori_loader.dataset), len(test_data_tri_loader.dataset)))
     for epo in range(epoch):
-        loss = train(badnet, train_data_loader, criterion, optimizer, loss_mode)
-        acc_train = eval(badnet, train_data_loader, batch_size=batch_size, mode='backdoor', print_perform=print_perform_every_epoch)
-        acc_test_ori = eval(badnet, test_data_ori_loader, batch_size=batch_size, mode='backdoor', print_perform=print_perform_every_epoch)
-        acc_test_tri = eval(badnet, test_data_tri_loader, batch_size=batch_size, mode='backdoor', print_perform=print_perform_every_epoch)
+        loss = train(model, train_data_loader, criterion, optimizer, loss_mode)
+        acc_train = eval(model, train_data_loader, batch_size=batch_size, mode='backdoor', print_perform=print_perform_every_epoch)
+        acc_test_ori = eval(model, test_data_ori_loader, batch_size=batch_size, mode='backdoor', print_perform=print_perform_every_epoch)
+        acc_test_tri = eval(model, test_data_tri_loader, batch_size=batch_size, mode='backdoor', print_perform=print_perform_every_epoch)
 
         print("# EPOCH%d   loss: %.4f  training acc: %.4f, ori testing acc: %.4f, trigger testing acc: %.4f\n"\
               % (epo, loss.item(), acc_train, acc_test_ori, acc_test_tri))
         
         # save model 
-        torch.save(badnet.state_dict(), basic_model_path)
+        torch.save(model.state_dict(), basic_model_path)
 
         # save training progress
         train_process.append(( dataname, batch_size, trigger_label, lr, epo, loss.item(), acc_train, acc_test_ori, acc_test_tri))
         df = pd.DataFrame(train_process, columns=("dataname", "batch_size", "trigger_label", "learning_rate", "epoch", "loss", "train_acc", "test_ori_acc", "test_tri_acc"))
         df.to_csv("./logs/%s_train_process_trigger%d.csv" % (dataname, trigger_label), index=False, encoding='utf-8')
 
-    return badnet
+    return model
 
 
 def train(model, data_loader, criterion, optimizer, loss_mode):
